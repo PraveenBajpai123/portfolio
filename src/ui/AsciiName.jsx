@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useStore } from '../store'
 
 // Big block letters built from small monospace characters that keep scrambling
 // ("MADE TO MOVE" style). The text is rasterised once into a mask; every grid cell that
@@ -10,7 +11,9 @@ const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@*+=?'
 const FPS = 24
 const HOVER_R = 120 // px radius of the pointer's influence
 
-const pick = () => GLYPHS[(Math.random() * GLYPHS.length) | 0]
+const pick = () => (Math.random() * GLYPHS.length) | 0 // glyph index
+// atlas rows: base, pink, cyan, intro
+const COLORS = ['#ece8fb', '#ff8ae6', '#8ff6ff', '#b9a2ff']
 
 export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '' }) {
   const canvasRef = useRef(null)
@@ -26,6 +29,10 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
     let cw = 8
     let ch = 12
     let dpr = 1
+    let atlas = null
+    let fill = null // soft solid letters behind the characters, so the name reads at a glance
+    let gw = 1
+    let gh = 1
     let raf = 0
     let lastDraw = 0
     let alive = true
@@ -51,6 +58,22 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
       canvas.height = Math.round(H * dpr)
       canvas.style.height = `${H}px`
 
+      // Glyph sheet: every character pre-drawn once in each colour, then copied per cell —
+      // far cheaper than typesetting ~1,500 characters on every redraw.
+      gw = Math.ceil(cw * dpr) + 2
+      gh = Math.ceil(ch * dpr) + 2
+      atlas = document.createElement('canvas')
+      atlas.width = gw * GLYPHS.length
+      atlas.height = gh * COLORS.length
+      const ax = atlas.getContext('2d')
+      ax.font = `600 ${ch * 0.92 * dpr}px "JetBrains Mono", ui-monospace, monospace`
+      ax.textAlign = 'center'
+      ax.textBaseline = 'middle'
+      COLORS.forEach((col, row) => {
+        ax.fillStyle = col
+        for (let i = 0; i < GLYPHS.length; i++) ax.fillText(GLYPHS[i], i * gw + gw / 2, row * gh + gh / 2)
+      })
+
       // rasterise the text into a mask
       const m = document.createElement('canvas')
       m.width = Math.ceil(W)
@@ -70,6 +93,23 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
       })
       const data = mx.getImageData(0, 0, m.width, m.height).data
 
+      fill = document.createElement('canvas')
+      fill.width = canvas.width
+      fill.height = canvas.height
+      const fx = fill.getContext('2d')
+      fx.scale(dpr, dpr)
+      const grad = fx.createLinearGradient(0, 0, W, 0)
+      grad.addColorStop(0, '#ff8ae6')
+      grad.addColorStop(0.5, '#d9d0ff')
+      grad.addColorStop(1, '#8ff6ff')
+      fx.fillStyle = grad
+      fx.textAlign = 'center'
+      fx.textBaseline = 'alphabetic'
+      fx.font = mx.font
+      fx.shadowColor = 'rgba(185, 162, 255, 0.9)'
+      fx.shadowBlur = fs * 0.12
+      lines.forEach((l, i) => fx.fillText(l, W / 2, lineH * (i + 1) - fs * 0.04))
+
       // one cell per grid position that falls inside a letter
       const now = performance.now()
       cells = []
@@ -82,7 +122,7 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
               y,
               ch: pick(),
               next: now + Math.random() * 2000,
-              show: reduced ? 0 : 150 + Math.random() * 900, // intro: appear at a random moment
+              show: reduced ? 0 : 600 + Math.random() * 1400, // intro: appear at a random moment
               glow: 0,
             })
           }
@@ -92,26 +132,28 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
     }
 
     const draw = (now, force = false) => {
-      if (!force && now - lastDraw < 1000 / FPS) return
+      // half rate while the 3D room is still loading
+      const fps = useStore.getState().load < 1 ? FPS / 2 : FPS
+      if (!force && now - lastDraw < 1000 / fps) return
       lastDraw = now
       const t = now - start
       const r = canvas.getBoundingClientRect()
       const px = pointer.x - r.left
       const py = pointer.y - r.top
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.clearRect(0, 0, W, H)
-      ctx.font = `600 ${ch * 0.92}px "JetBrains Mono", ui-monospace, monospace`
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.globalAlpha = 0.16 * (reduced ? 1 : Math.min(1, Math.max(0, (t - 500) / 1800)))
+      ctx.drawImage(fill, 0, 0)
+      const glyph = (g, row, x, y) =>
+        ctx.drawImage(atlas, g * gw, row * gh, gw, gh, Math.round(x * dpr - gw / 2), Math.round(y * dpr - gh / 2), gw, gh)
 
       for (const c of cells) {
         if (t < c.show) {
           // still assembling: a faint, fast-changing character
           if (Math.random() < 0.35) {
             ctx.globalAlpha = 0.18
-            ctx.fillStyle = '#b9a2ff'
-            ctx.fillText(pick(), c.x, c.y)
+            glyph(pick(), 3, c.x, c.y)
           }
           continue
         }
@@ -120,18 +162,17 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
         c.glow += (near - c.glow) * 0.35
         if (!reduced && now > c.next) {
           c.ch = pick()
-          c.next = now + (near > 0 ? 40 + Math.random() * 120 : 400 + Math.random() * 2600)
+          c.next = now + (near > 0 ? 40 + Math.random() * 120 : 700 + Math.random() * 3600)
         }
         const settle = Math.min(1, (t - c.show) / 300)
         if (c.glow > 0.04) {
           // magenta → cyan across the name, brightest at the pointer
-          ctx.fillStyle = c.x / W < 0.5 ? '#ff8ae6' : '#8ff6ff'
           ctx.globalAlpha = Math.min(1, 0.55 + c.glow * 0.6) * settle
+          glyph(c.ch, c.x / W < 0.5 ? 1 : 2, c.x, c.y)
         } else {
-          ctx.fillStyle = '#ece8fb'
           ctx.globalAlpha = (0.62 + ((c.x * 7 + c.y * 13) % 10) / 28) * settle
+          glyph(c.ch, 0, c.x, c.y)
         }
-        ctx.fillText(c.ch, c.x, c.y)
       }
       ctx.globalAlpha = 1
     }
@@ -156,9 +197,8 @@ export default function AsciiName({ lines = ['PRAVEEN', 'BAJPAI'], className = '
     }
 
     const ro = new ResizeObserver(() => alive && build())
-    // the letter mask needs the real font
-    document.fonts
-      .load('800 100px Manrope')
+    // the letter mask needs Manrope; the glyph sheet needs JetBrains Mono
+    Promise.all([document.fonts.load('800 100px Manrope'), document.fonts.load('600 20px "JetBrains Mono"')])
       .catch(() => {})
       .then(() => {
         if (!alive) return

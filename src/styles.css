@@ -55,7 +55,7 @@ a {
 
 .scroll-track {
   position: relative;
-  height: 900vh;
+  height: 1100vh;
   pointer-events: none;
 }
 
@@ -141,53 +141,8 @@ a {
 }
 
 .pill:hover {
-  border-color: rgba(255, 180, 105, 0.6);
+  border-color: rgba(255, 95, 220, 0.6);
   background: var(--accent-soft);
-}
-
-.bars {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 13px;
-}
-
-.bars i {
-  width: 2px;
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-  animation: bar 1.4s ease-in-out infinite;
-}
-
-.bars i:nth-child(2) {
-  animation-delay: -0.35s;
-}
-.bars i:nth-child(3) {
-  animation-delay: -0.7s;
-}
-.bars i:nth-child(4) {
-  animation-delay: -1.05s;
-}
-
-.bars.is-muted i {
-  animation: none;
-  height: 3px;
-  background: var(--muted);
-}
-
-@keyframes bar {
-  0%,
-  100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-.bars i {
-  transform-origin: bottom;
 }
 
 /* ---------- chapters ---------- */
@@ -382,9 +337,6 @@ a {
   .brand span {
     display: none;
   }
-  .sound-label {
-    display: none;
-  }
   .pill {
     padding: 0 13px;
   }
@@ -506,4 +458,294 @@ a {
   color: #140d2e;
   background: #f4f1ff;
   border-color: transparent;
+}
+
+/* ---------- music player (cassette tape) ---------- */
+.hud-actions {
+  align-items: center;
+}
+
+.mp {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 58px;
+  padding: 7px 7px 7px 9px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(30, 20, 66, 0.72), rgba(12, 8, 30, 0.72));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.mp-tape {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 42px;
+  border-radius: 12px;
+  background: #0a0720;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex: none;
+}
+
+.mp-cassette {
+  width: 46px;
+  height: 31px;
+}
+
+.mp-cas-body {
+  fill: #1a1240;
+  stroke: rgba(238, 234, 255, 0.35);
+  stroke-width: 1.2;
+}
+
+.mp-cas-window {
+  fill: #07051a;
+  stroke: rgba(255, 95, 220, 0.6);
+  stroke-width: 1;
+}
+
+.mp-cas-foot {
+  fill: none;
+  stroke: rgba(238, 234, 255, 0.25);
+  stroke-width: 1;
+}
+
+.mp-reel-hub {
+  fill: none;
+  stroke: #7ff3ff;
+  stroke-width: 1.4;
+}
+
+.mp-reel-spoke {
+  stroke: #7ff3ff;
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.mp-reel {
+  transform-box: view-box;
+  animation: mp-spin 2.6s linear infinite;
+  animation-play-state: paused;
+}
+
+.mp-cassette.is-spinning .mp-reel {
+  animation-play-state: running;
+}
+
+@keyframes mp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mp-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 150px;
+  min-width: 0;
+}
+
+.mp-kicker {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mp-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-bar {
+  display: block;
+  height: 3px;
+  margin-top: 3px;
+  border-radius: 3px;
+  background: rgba(238, 234, 255, 0.12);
+  overflow: hidden;
+}
+
+.mp-bar i {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #ff5fdc, #7ff3ff);
+  transition: transform 0.5s linear;
+}
+
+.mp-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mp-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s, color 0.2s, opacity 0.2s;
+}
+
+.mp-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.mp-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.mp-play {
+  width: 44px;
+  height: 44px;
+  border-color: transparent;
+  background: linear-gradient(140deg, #6b4dff, #3a2a9e);
+  box-shadow: 0 0 0 4px rgba(107, 77, 255, 0.14), 0 6px 22px rgba(107, 77, 255, 0.45);
+}
+
+.mp-play svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mp-play:hover {
+  background: linear-gradient(140deg, #7d63ff, #4532b8);
+  transform: scale(1.05);
+}
+
+.mp.is-playing .mp-play {
+  animation: mp-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes mp-glow {
+  50% {
+    box-shadow: 0 0 0 6px rgba(255, 95, 220, 0.14), 0 6px 26px rgba(255, 95, 220, 0.45);
+  }
+}
+
+.mp-wind svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.mp-wind {
+  position: relative;
+  opacity: 0.55;
+}
+
+.mp-wind::after {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+.mp-wind.is-on {
+  opacity: 1;
+  color: #7ff3ff;
+  border-color: rgba(127, 243, 255, 0.4);
+}
+
+.mp-wind.is-on::after {
+  display: none;
+}
+
+.mp-avatar {
+  width: 44px;
+  height: 44px;
+  padding: 2px;
+  border-radius: 50%;
+  flex: none;
+  background: conic-gradient(from 200deg, #ff4fd8, #8a5cff, #7ff3ff, #ff4fd8);
+  transition: transform 0.2s;
+}
+
+.mp-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  border: 2px solid #0c0820;
+}
+
+.mp-avatar:hover {
+  transform: scale(1.06);
+}
+
+/* narrower screens: shed the extras, keep the tape and the main controls */
+@media (max-width: 1180px) {
+  .mp-time {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .mp-meta,
+  .mp-prev,
+  .mp-avatar {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .hud-actions .pill {
+    display: none; /* the resume link is also in the dock and the end card */
+  }
+  .mp {
+    height: 50px;
+    gap: 8px;
+    padding: 5px 6px;
+  }
+  .mp-tape {
+    width: 50px;
+    height: 38px;
+  }
+  .mp-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .mp-play {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-reel,
+  .mp.is-playing .mp-play {
+    animation: none;
+  }
 }

@@ -26,6 +26,9 @@ import {
   siGithub,
   siGmail,
   siSamsung,
+  siThreedotjs,
+  siFigma,
+  siVite,
 } from 'simple-icons'
 
 // Brand marks (Simple Icons, CC0 SVG data) drawn onto the book's canvases.
@@ -57,6 +60,9 @@ export const ICONS = {
   git: si(siGit),
   ffmpeg: si(siFfmpeg),
   vercel: si(siVercel),
+  threejs: { ...si(siThreedotjs), title: 'Three.js' },
+  figma: si(siFigma),
+  vite: si(siVite),
   zod: si(siZod),
   tailwind: si(siTailwindcss),
   leetcode: si(siLeetcode),

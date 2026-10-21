@@ -159,7 +159,7 @@ export function plasterTexture() {
 
 // Book cover: deep indigo cloth, a neon ribbon along the spine, silver-lavender foil
 // title and a row of foil-stamped stack logos — in the site's type.
-export function coverTexture(name, subtitle) {
+export function coverTexture(name, subtitle, photo = null) {
   const W = 1024, H = 1352
   const [c, ctx] = canvas(W, H)
   const g = ctx.createRadialGradient(W * 0.6, H * 0.32, 60, W * 0.55, H * 0.5, W)
@@ -176,16 +176,46 @@ export function coverTexture(name, subtitle) {
   ctx.globalAlpha = 1
   grain(ctx, W, H, { dark: 0.1, light: 0.04, seed: 11 })
 
-  // embossed rings, top right
+  // embossed rings, top right, haloing the portrait
+  const PHOTO = { x: W - 214, y: 262, r: 112 }
   ctx.save()
   ctx.strokeStyle = 'rgba(200, 185, 255, 0.07)'
   ctx.lineWidth = 2
   for (let r = 60; r < 620; r += 34) {
     ctx.beginPath()
-    ctx.arc(W - 90, 250, r, 0, Math.PI * 2)
+    ctx.arc(PHOTO.x, PHOTO.y, r, 0, Math.PI * 2)
     ctx.stroke()
   }
   ctx.restore()
+
+  // portrait in a neon ring (photo zoomed on the face; falls back to nothing if missing)
+  if (photo) {
+    const ring = ctx.createLinearGradient(PHOTO.x - PHOTO.r, PHOTO.y - PHOTO.r, PHOTO.x + PHOTO.r, PHOTO.y + PHOTO.r)
+    ring.addColorStop(0, '#ff4fd8')
+    ring.addColorStop(0.5, '#8a5cff')
+    ring.addColorStop(1, '#7ff3ff')
+    ctx.save()
+    ctx.shadowColor = 'rgba(177, 158, 239, 0.55)'
+    ctx.shadowBlur = 40
+    ctx.fillStyle = ring
+    ctx.beginPath()
+    ctx.arc(PHOTO.x, PHOTO.y, PHOTO.r + 9, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+    ctx.fillStyle = '#120e2e'
+    ctx.beginPath()
+    ctx.arc(PHOTO.x, PHOTO.y, PHOTO.r + 3, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.save()
+    ctx.beginPath()
+    ctx.arc(PHOTO.x, PHOTO.y, PHOTO.r, 0, Math.PI * 2)
+    ctx.clip()
+    const side = Math.min(photo.width, photo.height) * 0.62
+    const sx = (photo.width - side) / 2
+    const sy = photo.height * 0.08
+    ctx.drawImage(photo, sx, sy, side, side, PHOTO.x - PHOTO.r, PHOTO.y - PHOTO.r, PHOTO.r * 2, PHOTO.r * 2)
+    ctx.restore()
+  }
 
   // neon ribbon along the spine edge
   const rib = ctx.createLinearGradient(0, 0, 0, H)

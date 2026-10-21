@@ -395,8 +395,10 @@ function experiencePage(ctx, job, side, num) {
   y += 148 + 58
 
   y = bullets(ctx, job.page, f.x0, y, f.w) + 52
-  caption(ctx, 'Stack', f.x0, y)
-  stackRow(ctx, job.stackIcons, f.x0, y + 20, f.w)
+  if (job.stackIcons.length) {
+    caption(ctx, 'Stack', f.x0, y)
+    stackRow(ctx, job.stackIcons, f.x0, y + 20, f.w)
+  }
 }
 
 function projectPage(ctx, links, p, side, num) {
@@ -419,14 +421,14 @@ function projectPage(ctx, links, p, side, num) {
   const lx = f.x0 + sw + gap
   if (p.link) {
     box(ctx, lx, y, sw, 148, 22, C.accent)
-    caption(ctx, 'Live site', lx + 24, y + 44, 'rgba(255,255,255,0.72)')
+    caption(ctx, p.link.kind || 'Live site', lx + 24, y + 44, 'rgba(255,255,255,0.72)')
     fitText(ctx, p.link.label, lx + 24, y + 104, sw - 84, { weight: 800, size: 30, min: 20, color: '#ffffff' })
     text(ctx, '↗', lx + sw - 26, y + 104, { f: font(700, 34), color: '#ffffff', align: 'right' })
     links.push({ x: lx, y, w: sw, h: 148, href: p.link.href, label: `Visit ${p.link.label}` })
   } else {
     box(ctx, lx, y, sw, 148, 22, C.tile)
     caption(ctx, 'Runs on', lx + 24, y + 44)
-    para(ctx, 'Browser + serverless jobs', lx + 24, y + 92, sw - 48, { size: 24, lineH: 31, color: C.ink, weight: 700 })
+    para(ctx, p.runsOn || 'The browser', lx + 24, y + 92, sw - 48, { size: 24, lineH: 31, color: C.ink, weight: 700 })
   }
   y += 148 + 58
 
@@ -435,11 +437,71 @@ function projectPage(ctx, links, p, side, num) {
   stackRow(ctx, p.stackIcons, f.x0, y + 20, f.w)
 }
 
-function educationPage(ctx) {
-  const side = 'left'
+// The video page: a browser window on the page whose screen plays a recording of the live site.
+// The recording is copied into this page's texture frame by frame (see scene/PageVideo.jsx), so
+// the slot is sized in texture pixels to match the video exactly.
+export const VIDEO_PX = { w: 792, h: 496 }
+let videoSlot = null // { x, y } of the slot's top-left corner, in texture pixels
+
+export function getVideoSlot() {
+  return videoSlot && { ...videoSlot, ...VIDEO_PX, texH: Math.round(H * RES) }
+}
+
+function videoPage(ctx, links, p, poster, side, num) {
   const f = frame(side)
   paper(ctx, side)
-  furniture(ctx, side, profile.name, 7)
+  furniture(ctx, side, 'Projects', num)
+  eyebrow(ctx, '04', 'Projects', f.x0, 176)
+  const titleF = font(400, 84, SERIF)
+  text(ctx, 'See it', f.x0, 268, { f: titleF, color: C.ink })
+  text(ctx, 'in motion.', f.x0 + width(ctx, 'See it ', titleF), 268, { f: font(400, 84, SERIF, 'italic'), color: C.accent })
+  para(ctx, `A screen recording of ${p.link.label}: the editorial reading experience, scroll by scroll.`, f.x0, 330, f.w, {
+    size: 25,
+    lineH: 36,
+    color: C.sub,
+  })
+
+  // browser window, sized around the video (texture pixels → page units)
+  const vw = VIDEO_PX.w / RES
+  const vh = VIDEO_PX.h / RES
+  const pad = 12
+  const bar = 46
+  const bw = vw + pad * 2
+  const bx = f.x0 + (f.w - bw) / 2
+  const by = 420
+  box(ctx, bx, by, bw, bar + vh + pad, 22, '#121016')
+  ;['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => {
+    ctx.fillStyle = c
+    ctx.beginPath()
+    ctx.arc(bx + 26 + i * 20, by + bar / 2, 6, 0, Math.PI * 2)
+    ctx.fill()
+  })
+  box(ctx, bx + 104, by + 11, bw - 208, 24, 12, 'rgba(255,255,255,0.08)')
+  text(ctx, p.link.label, bx + bw / 2, by + 29, { f: font(600, 15), color: 'rgba(255,255,255,0.62)', align: 'center' })
+  const sx = bx + pad
+  const sy = by + bar
+  if (poster) ctx.drawImage(poster, sx, sy, vw, vh)
+  else box(ctx, sx, sy, vw, vh, 0, '#0b0a0d')
+  videoSlot = { x: Math.round(sx * RES), y: Math.round(sy * RES) }
+
+  let y = by + bar + vh + pad + 44
+  let x = f.x0
+  for (const h of p.highlights) {
+    const w = width(ctx, h, font(700, 19)) + 32
+    if (x + w > f.x1) {
+      x = f.x0
+      y += 50
+    }
+    chip(ctx, h, x, y, { size: 19, h: 40 })
+    x += w + 10
+  }
+  button(ctx, links, `Visit ${p.link.label}  ↗`, p.link.href, f.x0, y + 66, f.w)
+}
+
+function educationPage(ctx, side, num) {
+  const f = frame(side)
+  paper(ctx, side)
+  furniture(ctx, side, side === 'left' ? profile.name : 'Education', num)
   eyebrow(ctx, '05', 'Education', f.x0, 176)
   const titleF = font(400, 88, SERIF)
   text(ctx, 'Learning', f.x0, 272, { f: titleF, color: C.ink })
@@ -487,17 +549,16 @@ function educationPage(ctx) {
   })
 }
 
-function contactPage(ctx, links) {
-  const side = 'right'
+function contactPage(ctx, links, side, num) {
   const f = frame(side)
   paper(ctx, side)
-  furniture(ctx, side, 'Contact', 8)
+  furniture(ctx, side, side === 'left' ? profile.name : 'Contact', num)
   eyebrow(ctx, '06', 'Contact', f.x0, 176)
   text(ctx, "Let's build", f.x0, 286, { f: font(400, 100, SERIF), color: C.ink })
   text(ctx, 'something.', f.x0, 382, { f: font(400, 100, SERIF, 'italic'), color: C.accent })
   let y = para(
     ctx,
-    'Have an idea, a role or a hard problem in agentic AI, backends or the web? I would love to hear about it.',
+    'Hiring for frontend, building a product, or want an interface that feels great to use? I would love to hear about it.',
     f.x0,
     456,
     f.w,
@@ -509,20 +570,39 @@ function contactPage(ctx, links) {
   button(ctx, links, 'Download resume (PDF)  ↓', RESUME_PDF, f.x0, y, f.w, { download: true })
 }
 
+// Last page: a sign-off and a short colophon, like the end of a printed book.
+function endPage(ctx, side, num) {
+  const f = frame(side)
+  paper(ctx, side)
+  furniture(ctx, side, 'The end', num)
+  text(ctx, 'Thanks for', f.x0, 330, { f: font(400, 100, SERIF), color: C.ink })
+  text(ctx, 'reading.', f.x0, 426, { f: font(400, 100, SERIF, 'italic'), color: C.accent })
+  para(ctx, 'Close the book whenever you like. Everything in it is also one click away as a PDF or a plain web page.', f.x0, 506, f.w, {
+    size: 27,
+    lineH: 41,
+    color: C.sub,
+  })
+  text(ctx, '— Praveen', f.x0, 700, { f: font(600, 64, '"Caveat", cursive'), color: C.ink })
+
+  const y = 1000
+  rule(ctx, f.x0, f.x1, y)
+  caption(ctx, 'Colophon', f.x0, y + 50)
+  const lines = [
+    'Set in Instrument Serif, Manrope and JetBrains Mono.',
+    'Every page is drawn in code on a canvas and turned in WebGL.',
+    'Music generated live in the browser with the Web Audio API.',
+  ]
+  lines.forEach((l, i) => text(ctx, l, f.x0, y + 100 + i * 38, { f: font(500, 22), color: C.faint }))
+}
+
 function blankPage(ctx, side) {
   paper(ctx, side)
 }
 
 // ---------- assembly ----------
 
-function texture(c) {
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  t.anisotropy = 8
-  return releaseAfterUpload(t)
-}
 
-function loadImage(src, timeout = 4000) {
+export function loadImage(src, timeout = 4000) {
   return new Promise((resolve) => {
     const img = new Image()
     const t = setTimeout(() => resolve(null), timeout)
@@ -541,34 +621,49 @@ function loadImage(src, timeout = 4000) {
 const PAGE_LIST = [
   ['about', (ctx, links, assets) => aboutPage(ctx, links, assets.photo)],
   ['stack', (ctx) => stackPage(ctx)],
-  ['samsung', (ctx) => experiencePage(ctx, experience[0], 'left', 3)],
-  ['rootvestors', (ctx) => experiencePage(ctx, experience[1], 'right', 4)],
+  ['samsung', (ctx) => experiencePage(ctx, experience[1], 'left', 3)],
+  ['rootvestors', (ctx) => experiencePage(ctx, experience[2], 'right', 4)],
   ['cineprism', (ctx, links) => projectPage(ctx, links, projects[0], 'left', 5)],
-  ['editor', (ctx, links) => projectPage(ctx, links, projects[1], 'right', 6)],
-  ['education', (ctx) => educationPage(ctx)],
-  ['contact', (ctx, links) => contactPage(ctx, links)],
+  ['cineprismVideo', (ctx, links, assets) => videoPage(ctx, links, projects[0], assets.poster, 'right', 6)],
+  ['editor', (ctx, links) => projectPage(ctx, links, projects[1], 'left', 7)],
+  ['education', (ctx) => educationPage(ctx, 'right', 8)],
+  ['contact', (ctx, links) => contactPage(ctx, links, 'left', 9)],
+  ['end', (ctx) => endPage(ctx, 'right', 10)],
   ['blankLeft', (ctx) => blankPage(ctx, 'left')],
 ]
 export const PAGE_COUNT = PAGE_LIST.length
 
-function drawOne(draw, assets) {
-  const [c, ctx] = makeCanvas()
-  const links = []
-  draw(ctx, links, assets)
-  return {
-    texture: texture(c),
-    links: links.map((l) => ({ ...l, x: l.x / W, y: l.y / H, w: l.w / W, h: l.h / H })),
+// Blank page slots: the textures exist straight away, so the 3D scene can be built and its
+// shaders compiled in the background while drawPagesInto() paints the pages.
+export function createPageSlots() {
+  const pages = {}
+  for (const [id] of PAGE_LIST) {
+    const [canvas, ctx] = makeCanvas()
+    ctx.fillStyle = C.paper
+    ctx.fillRect(0, 0, W, H)
+    const t = new THREE.CanvasTexture(canvas)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 8
+    pages[id] = { texture: t, links: [], canvas, ctx }
   }
+  return pages
 }
 
-// Draws one page per task so the main thread (and the loader) never stalls.
-// onPage(n) is called after each page with the number drawn so far.
-export async function drawPagesAsync(onPage) {
-  const assets = { photo: await loadImage('/photo.jpg') }
-  const pages = {}
+// Paints every page into its slot, one page per task so the main thread (and the loader)
+// never stalls. onPage(n) is called after each page with the number drawn so far.
+export async function drawPagesInto(pages, onPage) {
+  const [photo, poster] = await Promise.all([loadImage('/photo.jpg'), loadImage(projects[0].video.poster)])
+  const assets = { photo, poster }
   let n = 0
   for (const [id, draw] of PAGE_LIST) {
-    pages[id] = drawOne(draw, assets)
+    const p = pages[id]
+    const links = []
+    draw(p.ctx, links, assets)
+    p.links.push(...links.map((l) => ({ ...l, x: l.x / W, y: l.y / H, w: l.w / W, h: l.h / H })))
+    releaseAfterUpload(p.texture) // free the canvas once the painted page is on the GPU
+    p.texture.needsUpdate = true
+    delete p.canvas
+    delete p.ctx
     onPage?.(++n)
     await new Promise((r) => setTimeout(r, 0))
   }
@@ -576,7 +671,6 @@ export async function drawPagesAsync(onPage) {
     paperCache[k].width = paperCache[k].height = 0
     delete paperCache[k]
   }
-  return pages
 }
 
 // Find a link at a UV coordinate on a page (uv.y = 0 at the bottom of the canvas).

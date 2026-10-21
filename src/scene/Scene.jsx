@@ -7,34 +7,84 @@ import Decor from './Decor'
 import Desk, { DESK_TOP } from './Desk'
 import Lamp from './Lamp'
 import Book from './Book'
+import PageVideo from './PageVideo'
 import CameraRig from './CameraRig'
 import { updateGust } from '../lib/wind'
 import { updateAudio } from '../lib/audio'
-import { scroll, useStore, bumpLoad } from '../store'
+import { scroll, useStore, bumpLoad, setLoadPart } from '../store'
 import { motion, shadows, IDLE_FPS } from '../lib/perf'
 
 const BOOK_POS = new THREE.Vector3(0.0, DESK_TOP, -0.14)
 
 // Compile every shader up front, then report when the first frames are on screen,
 // so the intro loader only unlocks once the room is really ready.
-function Warmup() {
+function Warmup({ offscreen: useOffscreen = true }) {
   const { gl, scene, camera } = useThree()
   const frames = useRef(-1)
   useEffect(() => {
     let alive = true
-    bumpLoad(0.66) // scene objects created
+    bumpLoad(0.4) // scene objects created
+
+    // Same material on a mesh that receives shadows and one that doesn't = two shader
+    // programs. Shadows are static and cheap here, so let everything receive them.
+    scene.traverse((o) => {
+      if (o.isMesh) o.receiveShadow = true
+    })
+    // Error checks force a synchronous wait on every program the first time it's used.
+    gl.debug.checkShaderErrors = import.meta.env.DEV
+
+    // Hold back rendering until every shader has compiled in the background
+    // (KHR_parallel_shader_compile). Drawing earlier makes the browser finish all of them
+    // at once on the main thread — a multi-second freeze on slower devices.
+    const render = gl.render
+    gl.render = () => {}
     const done = () => {
+      gl.render = render
       if (!alive) return
       if (useStore.getState().stage < 3) useStore.setState({ stage: 3 })
-      bumpLoad(0.93)
+      setLoadPart('compiled', 1)
+      prewarm()
+    }
+
+    // Once shaders are compiled and the pages painted, upload textures one per task
+    // (instead of all inside the first frame), then count a few frames to finish.
+    const prewarm = async () => {
+      while (alive && !useStore.getState().pagesReady) await new Promise((r) => setTimeout(r, 50))
+      const textures = new Set()
+      scene.traverse((o) => {
+        for (const m of [].concat(o.material || [])) {
+          for (const k of ['map', 'emissiveMap', 'alphaMap', 'bumpMap']) if (m[k]?.isTexture) textures.add(m[k])
+        }
+      })
+      for (const t of textures) {
+        if (!alive) return
+        gl.initTexture(t)
+        await new Promise((r) => setTimeout(r, 0))
+      }
+      if (!alive) return
+      useStore.setState({ warmed: true })
       frames.current = 0
     }
-    const run = gl.compileAsync ? gl.compileAsync(scene, camera) : Promise.resolve(gl.compile(scene, camera))
-    run.then(done, done)
+    // Shaders differ by destination: drawing into the effects' offscreen buffer skips tone
+    // mapping, drawing straight to the screen doesn't. The scene always draws through the
+    // effects pipeline (effects are faded out, not switched off, while reading), so only
+    // that one set is compiled — compiling both overloads slower GPUs.
+    const compile = (target) => {
+      const prev = gl.getRenderTarget()
+      gl.setRenderTarget(target)
+      const p = gl.compileAsync ? gl.compileAsync(scene, camera) : Promise.resolve(gl.compile(scene, camera))
+      gl.setRenderTarget(prev)
+      return p
+    }
+    const offscreen = useOffscreen ? new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }) : null
+    compile(offscreen)
+      .then(done, done)
+      .finally(() => offscreen?.dispose())
     return () => {
       alive = false
+      gl.render = render
     }
-  }, [gl, scene, camera])
+  }, [gl, scene, camera, useOffscreen])
   useFrame(() => {
     if (frames.current < 0) return
     frames.current++
@@ -56,8 +106,9 @@ function FrameDriver() {
     let last = 0
     const loop = (now) => {
       raf = requestAnimationFrame(loop)
-      const { entered, stage } = useStore.getState()
+      const { entered, stage, warmed } = useStore.getState()
       if (!entered && stage >= 4) return // intro is covering the canvas
+      if (!warmed) return // nothing to draw until shaders are compiled and textures uploaded
       const active = stage < 4 || now < motion.until
       if (active || now - last >= 1000 / IDLE_FPS - 2) {
         last = now
@@ -212,39 +263,48 @@ function Moonlight() {
   )
 }
 
-export default function Scene({ pages, reducedMotion, quality = 0, onDecline }) {
+export default function Scene({ pages, photo, reducedMotion, quality = 0, onDecline }) {
   const [reading, setReading] = useState(false)
   const lowPower = quality >= 1
-  // post effects (glow, grain, vignette) pause while reading: crisp text matters more there
-  const effectsOn = !lowPower && !reading
+  // Post effects stay in the pipeline (so shaders never need recompiling) but fade to zero
+  // while reading — grain and glow would only blur the text.
+  const bloom = useRef()
+  const vignette = useRef()
+  const noise = useRef()
+  useEffect(() => {
+    if (bloom.current) bloom.current.intensity = reading ? 0 : 1.05
+    if (vignette.current) vignette.current.darkness = reading ? 0.25 : 0.72
+    if (noise.current) noise.current.blendMode.opacity.value = reading ? 0 : 0.035
+  }, [reading])
   const aim = useMemo(() => new THREE.Vector3(BOOK_POS.x + 0.02, DESK_TOP + 0.01, BOOK_POS.z + 0.02), [])
   return (
     <>
       <color attach="background" args={['#07051a']} />
       <fog attach="fog" args={['#07051a', 3.2, 9]} />
-      <ambientLight color="#4a3a88" intensity={0.3} />
-      <hemisphereLight args={["#4a46a0", "#0b0a12", 0.75]} />
+      <ambientLight color="#5a46a0" intensity={0.38} />
+      <hemisphereLight args={["#5a4fb0", "#0b0a12", 0.85]} />
       <Moonlight />
 
       <Room calm={reducedMotion ? 0.35 : 1} />
       <Decor />
       <Desk />
       <Lamp aim={aim} />
-      <Book pages={pages} reducedMotion={reducedMotion} position={BOOK_POS} />
+      <Book pages={pages} photo={photo} reducedMotion={reducedMotion} position={BOOK_POS} />
+      <PageVideo page={pages.cineprismVideo} reducedMotion={reducedMotion} />
 
       <CameraRig bookPos={BOOK_POS} />
       <WindDriver />
-      <Warmup />
+      <Warmup offscreen={!lowPower} />
       <FrameDriver />
       <QualityGuard onDecline={onDecline} />
       {SHOW_PERF && <PerfReadout />}
 
       <DprController quality={quality} onReading={setReading} />
       {!lowPower && (
-        <EffectComposer multisampling={2} enabled={effectsOn}>
-          <Bloom mipmapBlur intensity={1.05} luminanceThreshold={1.05} luminanceSmoothing={0.2} radius={0.7} />
-          <Vignette offset={0.28} darkness={0.72} />
-          <Noise opacity={0.035} />
+        <EffectComposer multisampling={2}>
+          <Bloom ref={bloom} mipmapBlur intensity={1.05} luminanceThreshold={1.05} luminanceSmoothing={0.2} radius={0.7} />
+          <Vignette ref={vignette} offset={0.28} darkness={0.72} />
+          <Noise ref={noise} opacity={0.035} />
         </EffectComposer>
       )}
     </>

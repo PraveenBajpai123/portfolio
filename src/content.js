@@ -5,10 +5,11 @@ export const RESUME_PDF = '/praveen-bajpai-resume.pdf'
 
 export const profile = {
   name: 'Praveen Bajpai',
-  tagline: 'Agentic AI · Backends · Web',
+  tagline: 'Frontend · React · 3D web',
   intro:
-    "I'm an Electronics & Communication undergrad at IIIT Naya Raipur who likes building things end to end — agentic AI pipelines, backends that hold up in production, and fast, typography-first web products.",
+    "I'm a frontend engineer and ECE undergrad at IIIT Naya Raipur. I build fast, typography-first interfaces in React and TypeScript, interactive 3D for the web with Three.js, and AI tools that turn designs into production UI.",
   facts: [
+    ['Focus', 'React, TypeScript & 3D for the web'],
     ['Studying', 'B.Tech ECE, IIIT Naya Raipur (2024 – 2028)'],
     ['CGPA', '8.82 / 10'],
     ['Last role', 'AI Research Intern, Samsung R&D Institute India'],
@@ -19,11 +20,11 @@ export const profile = {
     ['Studying', 'B.Tech ECE · IIIT Naya Raipur'],
     ['CGPA', '8.82 / 10'],
     ['Last role', 'AI Research Intern, Samsung R&D'],
-    ['Practice', '750+ DSA problems solved'],
+    ['Focus', 'React, TypeScript & 3D web'],
   ],
-  email: 'praveen24101@iiitnr.edu.in',
+  email: 'praveenbajpay123@gmail.com',
   links: [
-    { label: 'Email', value: 'praveen24101@iiitnr.edu.in', href: 'mailto:praveen24101@iiitnr.edu.in', icon: 'mail' },
+    { label: 'Email', value: 'praveenbajpay123@gmail.com', href: 'mailto:praveenbajpay123@gmail.com', icon: 'mail' },
     { label: 'LinkedIn', value: 'in/praveen-bajpai', href: 'https://www.linkedin.com/in/praveen-bajpai-302bb0270/', icon: 'linkedin' },
     { label: 'GitHub', value: 'PraveenBajpai123', href: 'https://github.com/PraveenBajpai123', icon: 'github' },
     { label: 'LeetCode', value: 'u/praveen1982', href: 'https://leetcode.com/u/praveen1982/', icon: 'leetcode' },
@@ -34,14 +35,45 @@ export const profile = {
 // `icon` keys refer to src/lib/icons.js. Groups without icons render as text chips.
 const sk = (name, icon) => ({ name, icon })
 export const skills = [
-  { group: 'Languages', items: [sk('C++', 'cpp'), sk('Python', 'python'), sk('JavaScript', 'javascript'), sk('TypeScript', 'typescript'), sk('C', 'c'), sk('SQL', 'sql')] },
-  { group: 'Frameworks', items: [sk('React', 'react'), sk('Next.js', 'nextjs'), sk('Node.js', 'nodejs'), sk('Express', 'express'), sk('Flask', 'flask'), sk('FastAPI', 'fastapi')] },
-  { group: 'AI & Data', items: [sk('Claude API', 'claude'), sk('Agentic AI', 'agent'), sk('RAG', 'rag'), sk('MCP', 'mcp'), sk('TensorFlow.js', 'tensorflow'), sk('Prisma', 'prisma'), sk('PostgreSQL', 'postgresql'), sk('Neo4j', 'neo4j')] },
-  { group: 'Tools', items: [sk('Git', 'git'), sk('FFmpeg', 'ffmpeg'), sk('AWS Lambda', 'lambda'), sk('Vercel', 'vercel'), sk('VS Code', 'vscode')] },
-  { group: 'Core', items: [sk('DSA'), sk('OOP'), sk('DBMS'), sk('Operating Systems'), sk('REST APIs')] },
+  { group: 'Frontend', items: [sk('React', 'react'), sk('Next.js', 'nextjs'), sk('TypeScript', 'typescript'), sk('JavaScript', 'javascript'), sk('Tailwind CSS', 'tailwind'), sk('Three.js', 'threejs')] },
+  { group: 'Backend', items: [sk('Node.js', 'nodejs'), sk('Express', 'express'), sk('FastAPI', 'fastapi'), sk('Python', 'python'), sk('PostgreSQL', 'postgresql'), sk('Prisma', 'prisma')] },
+  { group: 'AI & Data', items: [sk('Claude API', 'claude'), sk('Agentic AI', 'agent'), sk('RAG', 'rag'), sk('MCP', 'mcp'), sk('TensorFlow.js', 'tensorflow'), sk('Neo4j', 'neo4j')] },
+  { group: 'Tools', items: [sk('Figma', 'figma'), sk('Vite', 'vite'), sk('Git', 'git'), sk('Vercel', 'vercel'), sk('AWS Lambda', 'lambda'), sk('FFmpeg', 'ffmpeg')] },
+  { group: 'Also', items: [sk('C++'), sk('C'), sk('SQL'), sk('Flask'), sk('DSA'), sk('OOP'), sk('DBMS'), sk('REST APIs')] },
 ]
 
 export const experience = [
+  {
+    // Freelance, most recent. In the book it gets its own spread: this page + a page of the products.
+    // ← Replace the placeholders (dates, stack, numbers, links) with the real details.
+    id: 'kg',
+    company: 'KG Group',
+    role: 'Freelance Full-stack Developer',
+    where: 'Remote',
+    when: 'Ongoing',
+    stats: [
+      ['3', 'products built for the group'],
+      ['Ongoing', 'freelance engagement'],
+    ],
+    bullets: [
+      "Building three products for KG Group as a freelancer: the Eynetra website, a CRM portal and an owner's dashboard.",
+      "A CRM portal for the team's day-to-day customer work.",
+      "An owner's dashboard that brings the business's key numbers into one view.",
+    ],
+    tags: [],
+    logo: null,
+    page: [
+      "Building three products for KG Group as a freelancer: the Eynetra website, a CRM portal and an owner's dashboard.",
+      "A CRM portal for the team's day-to-day customer work.",
+      "An owner's dashboard that brings the business's key numbers into one view.",
+    ],
+    stackIcons: [],
+    products: [
+      { name: 'Eynetra', kind: 'Website', desc: 'The public website for Eynetra.', link: null },
+      { name: 'CRM portal', kind: 'Internal tool', desc: 'Where the team manages leads, customers and follow-ups.', link: null },
+      { name: "Owner's dashboard", kind: 'Analytics', desc: 'One screen for the owner to see how the business is doing.', link: null },
+    ],
+  },
   {
     company: 'Samsung R&D Institute India',
     role: 'AI Research Intern — Agentic AI & LLM Systems',
@@ -56,15 +88,15 @@ export const experience = [
       'Integrated LLM agents with the frontend over REST for task automation and decision-making; worked hands-on with MCP servers and RAG pipelines in production.',
       'Ran model evaluation and experiments; replaced local GPU inference with cloud LLMs behind a LiteLLM proxy.',
     ],
-    tags: ['Claude Agent SDK', 'FastAPI', 'MCP', 'RAG', 'LiteLLM', 'React + TS'],
+    tags: ['React + TypeScript', 'Figma', 'Claude Agent SDK', 'FastAPI', 'MCP', 'RAG', 'LiteLLM'],
     logo: 'samsung',
     // tighter wording for the book page (the full bullets above go to the accessible version)
     page: [
-      'Built an agentic pipeline (Claude Agent SDK + FastAPI) that turns Figma designs into production React + TypeScript — with 100% build success.',
+      'Turned Figma designs into production React + TypeScript components with an agentic pipeline (Claude Agent SDK + FastAPI) — 100% build success.',
       'Wired LLM agents into the frontend over REST, working with MCP servers and RAG pipelines in production.',
       'Ran model evaluations and moved local GPU inference to cloud LLMs behind a LiteLLM proxy.',
     ],
-    stackIcons: ['claude', 'fastapi', 'mcp', 'rag', 'react', 'typescript'],
+    stackIcons: ['react', 'typescript', 'figma', 'claude', 'fastapi', 'mcp'],
   },
   {
     company: 'Rootvestors',
@@ -109,6 +141,9 @@ export const projects = [
       'Statically generated, fully responsive pages with optimised asset loading.',
     ],
     stackIcons: ['nextjs', 'react', 'tailwind', 'vercel'],
+    // the page after this one plays a screen recording of the live site
+    video: { src: '/media/cineprism.mp4', poster: '/media/cineprism-poster.jpg' },
+    highlights: ['Next.js, statically generated', '10,000+ monthly visitors', 'OpenGraph + canonical SEO'],
   },
   {
     name: 'AI Image & Video Editor',
@@ -121,12 +156,31 @@ export const projects = [
       'Heavy processing offloaded to Python + AWS Lambda jobs so the Next.js UI stays responsive during exports.',
     ],
     link: null,
+    runsOn: 'Browser + serverless jobs',
     page: [
       'Background removal, plus object and face detection, running in the browser with TensorFlow.js.',
       'Live filter previews and colour grading; trim, merge and export video with FFmpeg.',
       'Heavy processing offloaded to Python on AWS Lambda so the UI stays responsive.',
     ],
     stackIcons: ['nextjs', 'python', 'tensorflow', 'ffmpeg', 'lambda'],
+  },
+  {
+    name: 'This portfolio',
+    kind: 'Interactive 3D resume',
+    stack: ['React', 'Three.js', 'React Three Fiber', 'Vite', 'Web Audio API'],
+    stat: ['WebGL', 'real-time 3D in React'],
+    bullets: [
+      'A neon-lit desk built with React Three Fiber: scroll to fly in, open the book and flip through the resume page by page.',
+      'Book pages are drawn on canvas at runtime from a single content file, and shaders compile in the background so the tour opens without a stutter.',
+      'Tuned for phones: on-demand rendering, static shadows, adaptive resolution and an automatic quality fallback, plus a generative Web Audio soundtrack.',
+    ],
+    link: { label: 'Source on GitHub', kind: 'Open source', href: 'https://github.com/PraveenBajpai123/portfolio' },
+    page: [
+      'A neon-lit desk in React Three Fiber: scroll in, open the book, flip through the resume.',
+      'Pages drawn on canvas at runtime from one content file; shaders compile in the background.',
+      'Tuned for phones: on-demand rendering, static shadows, adaptive resolution.',
+    ],
+    stackIcons: ['react', 'threejs', 'vite', 'vercel'],
   },
 ]
 
@@ -142,12 +196,14 @@ export const achievements = [
   ['ATF 2025', 'Selected for analytical & problem-solving skills'],
 ]
 
-// The four open spreads (after the cover), in reading order.
+// The five open spreads (after the cover), in reading order. The KG Group freelance work and
+// "This portfolio" are not in the book; they still appear on /resume.
 export const spreads = [
   { id: 'about', chapter: 'About', title: 'About & Tech stack' },
   { id: 'experience', chapter: 'Experience', title: 'Experience' },
-  { id: 'projects', chapter: 'Projects', title: 'Projects' },
-  { id: 'contact', chapter: 'Contact', title: 'Education & Contact' },
+  { id: 'cineprism', chapter: 'Projects', title: 'Projects · The CinePrism' },
+  { id: 'editor', chapter: 'Projects', title: 'AI Editor & Education' },
+  { id: 'contact', chapter: 'Contact', title: 'Contact' },
 ]
 
 // Links shown in the bottom dock for each spread (index 0 = closed book).
@@ -155,16 +211,18 @@ export const dockLinks = [
   [],
   profile.links.slice(0, 3),
   [],
-  projects.filter((p) => p.link).map((p) => ({ label: p.link.label, href: p.link.href })),
+  [{ label: projects[0].link.label, href: projects[0].link.href }],
+  [{ label: 'Resume PDF', href: RESUME_PDF, download: true }],
   [profile.links[0], profile.links[1], profile.links[2], { label: 'Resume PDF', href: RESUME_PDF, download: true }],
 ]
 
 // First page (landing): a single profile card. Edit freely.
 export const landing = {
-  role: 'Agentic AI · Backend · Full-stack',
+  role: 'Frontend · React · Three.js',
+  headline: 'Frontend engineer · React, TypeScript & 3D web', // the plain line under the name on the landing page
   summary: 'ECE at IIIT Naya Raipur. Previously AI Research Intern at Samsung R&D.',
   location: 'Naya Raipur, India',
   timeZone: 'Asia/Kolkata',
-  availability: 'Open to internships & collaborations', // ← change if this isn't right
+  availability: 'Open to frontend roles & internships', // ← change if this isn't right
   photo: '/photo.jpg', // drop your photo at public/photo.jpg
 }

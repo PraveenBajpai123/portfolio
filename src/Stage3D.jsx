@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import Scene from './scene/Scene'
-import { drawPagesAsync, PAGE_COUNT } from './lib/pages'
-import { useStore, bumpLoad } from './store'
+import { createPageSlots, drawPagesInto, loadImage, PAGE_COUNT } from './lib/pages'
+import { useStore, bumpLoad, setLoadPart } from './store'
 import { reloadOnContextRestore } from './lib/textures'
 
 // Everything three.js lives in this lazily loaded chunk, so the intro paints
@@ -15,13 +15,13 @@ const FONTS = [
   '800 28px "Manrope"',
   '400 80px "Instrument Serif"',
   'italic 400 80px "Instrument Serif"',
-  '500 20px "JetBrains Mono"',
   '600 20px "JetBrains Mono"',
   '600 40px "Caveat"',
 ]
 
 export default function Stage3D({ reducedMotion }) {
   const [pages, setPages] = useState(null)
+  const [photo, setPhoto] = useState(null)
   // quality steps down if the device struggles: 0 full · 1 no post effects · 2 lower room resolution
   const [quality, setQuality] = useState(0)
 
@@ -29,17 +29,23 @@ export default function Stage3D({ reducedMotion }) {
   useEffect(() => {
     let alive = true
     bumpLoad(0.2) // the 3D code has arrived
+    // the cover needs the portrait when the room is built (usually cached from the landing page)
+    const photoReady = loadImage('/photo.jpg', 2500)
     Promise.all(FONTS.map((f) => document.fonts.load(f)))
       .catch(() => {})
       .then(async () => {
         if (!alive) return
+        setPhoto(await photoReady)
         useStore.setState({ stage: 1 })
         bumpLoad(0.28)
-        // one page per task, so the loader keeps moving between pages
-        const drawn = await drawPagesAsync((n) => bumpLoad(0.28 + (0.32 * n) / PAGE_COUNT))
-        if (!alive) return
-        setPages(drawn)
+        // Build the room right away with blank pages so its shaders compile in the
+        // background while the pages are painted.
+        const slots = createPageSlots()
+        setPages(slots)
         useStore.setState({ ready: true, stage: 2 })
+        await new Promise((r) => setTimeout(r, 0))
+        await drawPagesInto(slots, (n) => setLoadPart('pages', n / PAGE_COUNT))
+        if (alive) useStore.setState({ pagesReady: true })
       })
     return () => {
       alive = false
@@ -58,6 +64,7 @@ export default function Stage3D({ reducedMotion }) {
       {pages && (
         <Scene
           pages={pages}
+          photo={photo}
           reducedMotion={reducedMotion}
           quality={quality}
           onDecline={() => setQuality((q) => Math.min(2, q + 1))}

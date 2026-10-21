@@ -1,12 +1,11 @@
 // Background audio, all generated live with the Web Audio API (no files needed):
-//  • calm ambient music — slow, soft chords with reverb, a warm bass and occasional
-//    gentle piano-like notes; it never loops exactly
-//  • a quiet wind layer underneath
+//  • a "tape" of calm ambient tracks — slow chords with reverb, a warm bass and sparse
+//    piano-like notes; every track has its own key, chords and pace, and never loops exactly
+//  • a quiet wind layer underneath (switchable on its own)
 //  • a soft paper page-turn
 //
-// Want your own track instead? Put an MP3 in /public/audio/ and set MUSIC_URL,
-// e.g. '/audio/ambient.mp3'. It will loop in place of the generated music.
-const MUSIC_URL = null
+// The music player UI drives this through play / pause / nextTrack / prevTrack /
+// setWind and reads getMusicState(); subscribe() notifies it of changes.
 
 const LEVELS = {
   music: 0.55, // overall music loudness
@@ -14,10 +13,92 @@ const LEVELS = {
   flip: 0.6, // page-turn loudness
 }
 
+// The tape. chords: pad notes (MIDI) + bass; melody: scale for the sparse plucks;
+// chordLen / step in seconds; pluck: chance of a note per step; duration: track length.
+export const TRACKS = [
+  {
+    title: 'Midnight Desk',
+    chords: [
+      { notes: [53, 57, 60, 64], bass: 41 }, // Fmaj7
+      { notes: [55, 59, 62, 64], bass: 43 }, // G6
+      { notes: [52, 55, 59, 62], bass: 40 }, // Em7
+      { notes: [57, 60, 64, 67], bass: 45 }, // Am7
+    ],
+    melody: [72, 74, 76, 79, 81, 84],
+    chordLen: 8,
+    step: 1,
+    pluck: 0.32,
+    duration: 180,
+  },
+  {
+    title: 'Neon Rain',
+    chords: [
+      { notes: [57, 60, 64, 71], bass: 45 }, // Am9
+      { notes: [53, 57, 60, 64], bass: 41 }, // Fmaj7
+      { notes: [55, 59, 60, 64], bass: 48 }, // Cmaj7
+      { notes: [55, 59, 62, 64], bass: 43 }, // G6
+    ],
+    melody: [69, 72, 74, 76, 79, 81],
+    chordLen: 10,
+    step: 0.8,
+    pluck: 0.26,
+    duration: 200,
+  },
+  {
+    title: 'Lamp Glow',
+    chords: [
+      { notes: [54, 57, 61, 64], bass: 38 }, // Dmaj9
+      { notes: [54, 57, 59, 62], bass: 47 }, // Bm7
+      { notes: [55, 59, 62, 66], bass: 43 }, // Gmaj7
+      { notes: [57, 61, 64, 66], bass: 45 }, // A6
+    ],
+    melody: [74, 76, 78, 81, 83, 86],
+    chordLen: 8,
+    step: 1.2,
+    pluck: 0.34,
+    duration: 170,
+  },
+  {
+    title: 'City Window',
+    chords: [
+      { notes: [51, 55, 58, 62], bass: 39 }, // Ebmaj7
+      { notes: [55, 58, 60, 63], bass: 48 }, // Cm7
+      { notes: [56, 60, 63, 67], bass: 44 }, // Abmaj7
+      { notes: [53, 58, 62, 67], bass: 46 }, // Bb6
+    ],
+    melody: [75, 77, 79, 82, 84, 87],
+    chordLen: 9,
+    step: 1,
+    pluck: 0.3,
+    duration: 190,
+  },
+  {
+    title: 'Paper Planes',
+    chords: [
+      { notes: [55, 59, 60, 64], bass: 48 }, // Cmaj7
+      { notes: [57, 60, 64, 67], bass: 45 }, // Am7
+      { notes: [53, 57, 60, 62], bass: 38 }, // Dm7
+      { notes: [55, 60, 62, 65], bass: 43 }, // G7sus4
+    ],
+    melody: [72, 74, 76, 79, 81, 84],
+    chordLen: 6,
+    step: 0.75,
+    pluck: 0.38,
+    duration: 160,
+  },
+]
+
 let ctx = null
 let master, musicBus, reverbIn, bodyGain, airGain, airFilter, airPan, startedAt
+let padFilter, keysOut
 let flipBuffer = null
 let scheduler = null
+
+// music state
+const music = { index: 0, playing: false, offset: 0, resumedAt: 0, wind: true }
+let seq = null // chord/melody position within the current track
+const listeners = new Set()
+const emit = () => listeners.forEach((fn) => fn())
 
 // ---------- helpers ----------
 
@@ -72,17 +153,6 @@ function loop(buffer) {
 
 // ---------- generative music ----------
 
-// Fmaj7 → G6 → Em7 → Am7 : warm, unresolved, calm.
-const CHORDS = [
-  { notes: [53, 57, 60, 64], bass: 41 },
-  { notes: [55, 59, 62, 64], bass: 43 },
-  { notes: [52, 55, 59, 62], bass: 40 },
-  { notes: [57, 60, 64, 67], bass: 45 },
-]
-const MELODY = [72, 74, 76, 79, 81, 84] // C major pentatonic, upper register
-const CHORD_LEN = 8 // seconds per chord
-const STEP = 1 // seconds per melody step
-
 function padVoice(dest, freq, t, len, level) {
   const g = ctx.createGain()
   g.gain.setValueAtTime(0, t)
@@ -130,9 +200,9 @@ function pluck(dest, freq, t, level) {
   }
 }
 
-function startGenerativeMusic() {
+function buildMusicGraph() {
   // pad → gentle low-pass (slowly breathing) → dry + reverb
-  const padFilter = ctx.createBiquadFilter()
+  padFilter = ctx.createBiquadFilter()
   padFilter.type = 'lowpass'
   padFilter.frequency.value = 950
   padFilter.Q.value = 0.4
@@ -148,67 +218,99 @@ function startGenerativeMusic() {
   padOut.connect(musicBus)
   padOut.connect(reverbIn)
 
-  const keysOut = ctx.createGain()
+  keysOut = ctx.createGain()
   keysOut.gain.value = 0.55
   keysOut.connect(musicBus)
-  const keysSend = ctx.createGain()
-  keysSend.gain.value = 1
-  keysOut.connect(keysSend).connect(reverbIn)
-
-  let chordIndex = 0
-  let nextChord = ctx.currentTime + 0.2
-  let nextStep = ctx.currentTime + 4
-  let lastNote = 76
-
-  const tick = () => {
-    if (!ctx) return
-    const horizon = ctx.currentTime + 1.5
-    while (nextChord < horizon) {
-      const chord = CHORDS[chordIndex % CHORDS.length]
-      chord.notes.forEach((n) => padVoice(padFilter, midi(n), nextChord, CHORD_LEN, 0.05))
-      padVoice(padFilter, midi(chord.bass), nextChord, CHORD_LEN, 0.07)
-      chordIndex++
-      nextChord += CHORD_LEN
-    }
-    while (nextStep < horizon) {
-      // sparse, wandering melody that prefers small steps
-      if (Math.random() < 0.32) {
-        const candidates = MELODY.filter((n) => Math.abs(n - lastNote) <= 5)
-        const note = candidates[Math.floor(Math.random() * candidates.length)] || 76
-        const t = nextStep + Math.random() * 0.15
-        pluck(keysOut, midi(note), t, 0.06 + Math.random() * 0.03)
-        if (Math.random() < 0.18) pluck(keysOut, midi(note - 12), t + 0.02, 0.035)
-        lastNote = note
-      }
-      nextStep += STEP
-    }
-  }
-  tick()
-  scheduler = setInterval(tick, 300)
+  keysOut.connect(reverbIn)
 }
 
-async function startTrack(url) {
-  try {
-    const data = await (await fetch(url)).arrayBuffer()
-    const buffer = await ctx.decodeAudioData(data)
-    const src = loop(buffer)
-    src.connect(musicBus)
-  } catch {
-    startGenerativeMusic() // fall back to the generated music
+function resetSequence() {
+  const track = TRACKS[music.index]
+  seq = {
+    chord: 0,
+    nextChord: ctx.currentTime + 0.15,
+    nextStep: ctx.currentTime + 2.5,
+    lastNote: track.melody[2],
   }
+}
+
+function tick() {
+  if (!ctx || !music.playing) return
+  const track = TRACKS[music.index]
+  if (elapsed() >= track.duration) {
+    nextTrack()
+    return
+  }
+  const horizon = ctx.currentTime + 1.5
+  while (seq.nextChord < horizon) {
+    const chord = track.chords[seq.chord % track.chords.length]
+    chord.notes.forEach((n) => padVoice(padFilter, midi(n), seq.nextChord, track.chordLen, 0.05))
+    padVoice(padFilter, midi(chord.bass), seq.nextChord, track.chordLen, 0.07)
+    seq.chord++
+    seq.nextChord += track.chordLen
+  }
+  while (seq.nextStep < horizon) {
+    // sparse, wandering melody that prefers small steps
+    if (Math.random() < track.pluck) {
+      const near = track.melody.filter((n) => Math.abs(n - seq.lastNote) <= 5)
+      const note = near[Math.floor(Math.random() * near.length)] || track.melody[2]
+      const t = seq.nextStep + Math.random() * 0.15
+      pluck(keysOut, midi(note), t, 0.06 + Math.random() * 0.03)
+      if (Math.random() < 0.18) pluck(keysOut, midi(note - 12), t + 0.02, 0.035)
+      seq.lastNote = note
+    }
+    seq.nextStep += track.step
+  }
+}
+
+function elapsed() {
+  if (!ctx) return music.offset
+  return music.playing ? music.offset + (ctx.currentTime - music.resumedAt) : music.offset
+}
+
+function fadeMusic(to, seconds) {
+  const now = ctx.currentTime
+  musicBus.gain.cancelScheduledValues(now)
+  musicBus.gain.setValueAtTime(musicBus.gain.value, now)
+  musicBus.gain.linearRampToValueAtTime(to, now + seconds)
 }
 
 // ---------- public API ----------
 
+export function subscribe(fn) {
+  listeners.add(fn)
+  return () => listeners.delete(fn)
+}
+
+export function getMusicState() {
+  const track = TRACKS[music.index]
+  return {
+    started: Boolean(ctx),
+    playing: music.playing,
+    index: music.index,
+    count: TRACKS.length,
+    title: track.title,
+    duration: track.duration,
+    elapsed: Math.min(track.duration, elapsed()),
+    wind: music.wind,
+  }
+}
+
 // Must be called from a click/tap (browsers block audio until a user gesture).
+// muted = start with the music paused (wind and page turns still play).
 export function startAudio(muted) {
   if (ctx) return
   const AC = window.AudioContext || window.webkitAudioContext
   if (!AC) return
   ctx = new AC()
+  try {
+    music.wind = localStorage.getItem('desk-wind') !== '0'
+  } catch {
+    /* storage unavailable */
+  }
 
   master = ctx.createGain()
-  master.gain.value = muted ? 0 : 1
+  master.gain.value = 1
   const comp = ctx.createDynamicsCompressor()
   comp.threshold.value = -20
   comp.ratio.value = 3
@@ -255,10 +357,10 @@ export function startAudio(muted) {
   flipBuffer = noiseBuffer(0.6, 'white')
   startedAt = ctx.currentTime
 
-  if (MUSIC_URL) startTrack(MUSIC_URL)
-  else startGenerativeMusic()
-  musicBus.gain.setValueAtTime(0, ctx.currentTime)
-  musicBus.gain.linearRampToValueAtTime(LEVELS.music, ctx.currentTime + 6)
+  buildMusicGraph()
+  scheduler = setInterval(tick, 300)
+  if (!muted) play(6) // slow first fade-in
+  else emit()
 
   document.addEventListener('visibilitychange', () => {
     if (!ctx) return
@@ -267,10 +369,71 @@ export function startAudio(muted) {
   })
 }
 
+// Resume (or start) the music. Starts the audio engine if needed — call from a click.
+export function play(fade = 1.2) {
+  if (!ctx) {
+    startAudio(false)
+    return
+  }
+  if (ctx.state === 'suspended') ctx.resume()
+  if (music.playing) return
+  music.playing = true
+  music.resumedAt = ctx.currentTime
+  resetSequence()
+  fadeMusic(LEVELS.music, fade)
+  tick()
+  emit()
+}
+
+export function pause() {
+  if (!ctx || !music.playing) return
+  music.offset = elapsed()
+  music.playing = false
+  fadeMusic(0, 0.6)
+  emit()
+}
+
+function switchTrack(index) {
+  music.index = (index + TRACKS.length) % TRACKS.length
+  music.offset = 0
+  if (ctx && music.playing) {
+    // dip, start the new progression, swell back in: a soft crossfade
+    music.resumedAt = ctx.currentTime
+    const now = ctx.currentTime
+    musicBus.gain.cancelScheduledValues(now)
+    musicBus.gain.setValueAtTime(musicBus.gain.value, now)
+    musicBus.gain.linearRampToValueAtTime(LEVELS.music * 0.15, now + 0.5)
+    musicBus.gain.linearRampToValueAtTime(LEVELS.music, now + 3)
+    resetSequence()
+    seq.nextChord = now + 0.5
+  }
+  emit()
+}
+
+export function nextTrack() {
+  switchTrack(music.index + 1)
+}
+
+export function prevTrack() {
+  // like a real player: restart the track if we're more than a few seconds in
+  if (elapsed() > 4) switchTrack(music.index)
+  else switchTrack(music.index - 1)
+}
+
+export function setWind(on) {
+  music.wind = on
+  try {
+    localStorage.setItem('desk-wind', on ? '1' : '0')
+  } catch {
+    /* storage unavailable */
+  }
+  emit()
+}
+
+// Kept for older callers: muted = music paused.
 export function setAudioMuted(muted) {
-  if (!ctx) return
-  if (!muted && ctx.state === 'suspended') ctx.resume()
-  master.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.35)
+  if (muted) pause()
+  else play()
 }
 
 // focus: 0 = room view, 1 = reading the book (wind gets quieter and more muffled).
@@ -278,7 +441,7 @@ export function updateAudio(gust, focus) {
   if (!ctx) return
   const now = ctx.currentTime
   const fadeIn = Math.min(1, (now - startedAt) / 5)
-  const level = fadeIn * LEVELS.wind * (1 - focus * 0.5)
+  const level = fadeIn * LEVELS.wind * (1 - focus * 0.5) * (music.wind ? 1 : 0)
   bodyGain.gain.setTargetAtTime(level * (0.08 + gust * 0.1), now, 0.4)
   airGain.gain.setTargetAtTime(level * (0.025 + gust * gust * 0.09), now, 0.4)
   airFilter.frequency.setTargetAtTime(480 + gust * 1000 - focus * 220, now, 0.5)

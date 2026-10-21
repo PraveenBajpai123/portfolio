@@ -5,8 +5,8 @@ import { profile } from '../content'
 
 // Dev-only: /?page=<id> shows one book page as a flat image (for reviewing layouts).
 // /?page=all shows every page in a grid.
-const IDS = ['about', 'stack', 'samsung', 'rootvestors', 'cineprism', 'editor', 'education', 'contact']
-const FONTS = ['500 28px "Manrope"', '700 28px "Manrope"', '800 28px "Manrope"', '600 28px "Manrope"', '400 80px "Instrument Serif"', 'italic 400 80px "Instrument Serif"']
+const IDS = ['about', 'stack', 'samsung', 'rootvestors', 'cineprism', 'cineprismVideo', 'editor', 'education', 'contact', 'end']
+const FONTS = ['500 28px "Manrope"', '700 28px "Manrope"', '800 28px "Manrope"', '600 28px "Manrope"', '400 80px "Instrument Serif"', 'italic 400 80px "Instrument Serif"', '600 40px "Caveat"']
 
 export default function PagePreview({ id }) {
   const [urls, setUrls] = useState(null)
@@ -17,10 +17,17 @@ export default function PagePreview({ id }) {
       img.onerror = () => res(null)
       img.src = '/photo.jpg'
     })
-    Promise.all([...FONTS.map((f) => document.fonts.load(f)), photoAsset]).then(async () => {
+    const posterAsset = new Promise((res) => {
+      const img = new Image()
+      img.onload = () => res(img)
+      img.onerror = () => res(null)
+      img.src = '/media/cineprism-poster.jpg'
+    })
+    Promise.all([...FONTS.map((f) => document.fonts.load(f)), photoAsset, posterAsset]).then(async () => {
       const photo = await photoAsset
+      const poster = await posterAsset
       const ids = id === 'all' ? IDS : [id]
-      setUrls(ids.map((i) => [i, i === 'cover' ? coverTexture(profile.name, profile.tagline).image.toDataURL() : previewPage(i, { photo })]))
+      setUrls(ids.map((i) => [i, i === 'cover' ? coverTexture(profile.name, profile.tagline, photo).image.toDataURL() : previewPage(i, { photo, poster })]))
       document.title = 'ready'
     })
   }, [id])

@@ -1,20 +1,9 @@
 import { useEffect, useState } from 'react'
-import { useStore, setMuted } from '../store'
+import { useStore } from '../store'
 import { CHAPTERS, scrollToProgress, stopScroll } from '../lib/scroll'
 import Landing from './Landing'
-import { startAudio, setAudioMuted } from '../lib/audio'
+import MusicPlayer from './MusicPlayer'
 import { profile, dockLinks, spreads, RESUME_PDF } from '../content'
-
-function SoundIcon({ muted }) {
-  return (
-    <span className={`bars ${muted ? 'is-muted' : ''}`} aria-hidden="true">
-      <i />
-      <i />
-      <i />
-      <i />
-    </span>
-  )
-}
 
 function ScrollHint() {
   const entered = useStore((s) => s.entered)
@@ -79,7 +68,7 @@ function Dock() {
           </>
         ) : (
           <>
-            <span className="dock-num">{['', 'I', 'II', 'III', 'IV'][spread]}</span> {title}
+            <span className="dock-num">{['', 'I', 'II', 'III', 'IV', 'V', 'VI'][spread]}</span> {title}
           </>
         )}
       </div>
@@ -104,20 +93,12 @@ function Dock() {
 
 export default function Overlay() {
   const entered = useStore((s) => s.entered)
-  const muted = useStore((s) => s.muted)
   const chapter = useStore((s) => s.chapter)
 
   const goHome = () => {
     scrollToProgress(0, { immediate: true })
     stopScroll()
     useStore.setState({ entered: false })
-  }
-
-  const toggleSound = () => {
-    const next = !muted
-    setMuted(next)
-    startAudio(next)
-    setAudioMuted(next)
   }
 
   return (
@@ -132,15 +113,7 @@ export default function Overlay() {
           <a className="pill" href={RESUME_PDF} download="Praveen-Bajpai-Resume.pdf">
             Resume PDF ↓
           </a>
-          <button
-            className="pill sound"
-            onClick={toggleSound}
-            aria-pressed={!muted}
-            aria-label={muted ? "Turn music on" : "Mute music"}
-          >
-            <SoundIcon muted={muted} />
-            <span className="sound-label">{muted ? 'Sound off' : 'Sound on'}</span>
-          </button>
+          <MusicPlayer onHome={goHome} />
         </div>
       </header>
 

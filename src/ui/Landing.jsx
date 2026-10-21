@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { GITHUB_PATH, LEETCODE_PATH, CODEFORCES_PATH } from './socialIcons'
-import { useStore, setMuted } from '../store'
+import { useStore } from '../store'
 import { startScroll, scrollToProgress } from '../lib/scroll'
 import { startAudio } from '../lib/audio'
 import { profile, landing, RESUME_PDF } from '../content'
-import GlintField from './GlintField'
+import DappledLight from './DappledLight'
 import AsciiName from './AsciiName'
 
-// First page: a full-screen hero over a drifting glint field. The 3D room loads behind
+// First page: a full-screen hero in soft, dappled window light. The 3D room loads behind
 // it; the tour button doubles as the loader. Progress comes from store.load (0..1) in small real
 // steps; between steps the number keeps creeping so it never looks stuck, and it only
 // reaches 100% when the room is truly ready.
@@ -25,18 +25,6 @@ const SOCIAL = [
   { label: 'Codeforces', path: CODEFORCES_PATH, href: linkFor('Codeforces')?.href },
   { label: 'Email', path: MAIL_PATH, href: linkFor('Email')?.href },
 ].filter((s) => s.href)
-
-function useLocalTime(timeZone) {
-  const fmt = () =>
-    new Intl.DateTimeFormat('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone }).format(new Date())
-  const [time, setTime] = useState(fmt)
-  useEffect(() => {
-    const id = setInterval(() => setTime(fmt()), 30000)
-    return () => clearInterval(id)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  return time.toLowerCase()
-}
 
 // Drives the loader by writing straight to the DOM (no React re-render per frame).
 // Returns true once loading is complete.
@@ -74,26 +62,11 @@ function useLoader(fillRef, numRef) {
   return ready
 }
 
-function Portrait() {
-  const [ok, setOk] = useState(true)
-  return (
-    <div className="hero-portrait">
-      {ok ? (
-        <img src={landing.photo} alt={profile.name} onError={() => setOk(false)} />
-      ) : (
-        <span aria-hidden="true">PB</span>
-      )}
-    </div>
-  )
-}
-
 export default function Landing() {
   const entered = useStore((s) => s.entered)
-  const muted = useStore((s) => s.muted)
   const fillRef = useRef(null)
   const numRef = useRef(null)
   const ready = useLoader(fillRef, numRef)
-  const time = useLocalTime(landing.timeZone)
   const [leaving, setLeaving] = useState(false)
   const [hidden, setHidden] = useState(entered)
 
@@ -129,28 +102,28 @@ export default function Landing() {
     // data-lenis-prevent: the smooth-scroll library is paused while this page is up and
     // would otherwise swallow wheel/touch scrolling here.
     <div className={`landing ${leaving ? 'is-leaving' : ''}`} data-lenis-prevent>
-      <GlintField />
+      <DappledLight />
       <div className="hero-vignette" aria-hidden="true" />
 
       <header className="hero-top">
-        <span className="hero-mark">PB</span>
+        <span className="hero-mark" aria-hidden="true">
+          PB
+        </span>
         <span className="hero-status">
           <span className="hero-dot" aria-hidden="true" />
           {landing.availability}
-          <span className="hero-sep" aria-hidden="true">
-            ·
-          </span>
-          <span className="hero-time">{time} IST</span>
         </span>
       </header>
 
       <main className="hero">
-        <Portrait />
-        <p className="hero-hello">Hello, I'm</p>
-        <h1 className="sr-only">Praveen Bajpai</h1>
+        <h1 className="sr-only">
+          {profile.name} — {landing.role}
+        </h1>
         <AsciiName lines={['PRAVEEN', 'BAJPAI']} />
-        <p className="hero-role">{landing.role}</p>
-        <p className="hero-summary">{landing.summary}</p>
+        <p className="hero-role">
+          {landing.headline}
+        </p>
+        <span className="hero-rule" aria-hidden="true" />
 
         <button
           className={`hero-tour ${ready ? 'is-ready' : ''}`}
@@ -158,32 +131,36 @@ export default function Landing() {
           disabled={!ready}
           aria-busy={!ready}
         >
-          <span className="hero-tour-fill" ref={fillRef} aria-hidden="true" />
           <span className="hero-tour-label">
             {ready ? (
               <>
-                Take the resume tour <span aria-hidden="true">→</span>
+                Take the resume tour
+                <span className="hero-arrow" aria-hidden="true">
+                  →
+                </span>
               </>
             ) : (
               <>
-                Preparing the tour · <span ref={numRef}>0%</span>
+                Preparing the tour <span ref={numRef}>0%</span>
               </>
             )}
           </span>
+          <span className="hero-tour-line" aria-hidden="true">
+            <span className="hero-tour-fill" ref={fillRef} />
+          </span>
         </button>
 
-        <div className="hero-actions">
-          <a className="hero-link" href={RESUME_PDF} download="Praveen-Bajpai-Resume.pdf">
-            Download resume ↓
+        <div className="hero-links">
+          <a className="hero-link" href="/resume">
+            Read online
           </a>
-          <label className="hero-sound">
-            <input type="checkbox" checked={!muted} onChange={(e) => setMuted(!e.target.checked)} />
-            <span className="hero-switch" aria-hidden="true" />
-            Music
-          </label>
+          <span className="hero-links-dot" aria-hidden="true" />
+          <a className="hero-link" href={RESUME_PDF} download="Praveen-Bajpai-Resume.pdf">
+            Download PDF
+          </a>
         </div>
 
-        <ul className="hero-social">
+        <ul className="hero-social" aria-label="Contact">
           {SOCIAL.map((s) => (
             <li key={s.label}>
               <a
@@ -203,8 +180,7 @@ export default function Landing() {
       </main>
 
       <footer className="hero-foot">
-        <span>{landing.location}</span>
-        <span className="hero-hint">Click anywhere to send a wave of light</span>
+        <span className="hero-hint">Move or click to stir the leaves</span>
       </footer>
     </div>
   )

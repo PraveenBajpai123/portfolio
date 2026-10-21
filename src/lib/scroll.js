@@ -6,7 +6,7 @@ import { kick } from './perf'
 export const T = {
   wideHold: 0.05, // establishing shot holds until here
   arrive: 0.2, // camera settles above the closed book
-  flips: [0.26, 0.41, 0.56, 0.71], // spread 1..4 opens at these points
+  flips: [0.25, 0.38, 0.51, 0.64, 0.77], // spread 1..5 opens at these points
   finale: 0.9, // camera starts pulling back
   close: 0.92, // the book closes (pages flip back, cover shuts)
   end: 0.975, // "thanks for reading" card appears
@@ -15,10 +15,11 @@ export const T = {
 export const CHAPTERS = [
   { label: 'Desk', p: 0 },
   { label: 'Cover', p: 0.22 },
-  { label: 'About', p: 0.32 },
-  { label: 'Experience', p: 0.47 },
-  { label: 'Projects', p: 0.62 },
-  { label: 'Contact', p: 0.78 },
+  { label: 'About', p: 0.31 },
+  { label: 'Experience', p: 0.44 },
+  { label: 'Projects', p: 0.57 },
+  { label: 'Education', p: 0.7 },
+  { label: 'Contact', p: 0.83 },
   { label: 'The end', p: 1 },
 ]
 

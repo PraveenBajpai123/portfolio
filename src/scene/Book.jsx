@@ -24,8 +24,9 @@ const SEG = 24
 const LEAVES = [
   ['stack', 'samsung'],
   ['rootvestors', 'cineprism'],
-  ['editor', 'education'],
-  ['contact', 'blankLeft'],
+  ['cineprismVideo', 'editor'],
+  ['education', 'contact'],
+  ['end', 'blankLeft'],
 ]
 
 const L0 = BOOK.cover + BOOK.block // top of the right-hand paper block
@@ -116,7 +117,7 @@ function makeLeaf(geo, edgeMat, front, back, index) {
   }
 }
 
-export default function Book({ pages, reducedMotion, ...props }) {
+export default function Book({ pages, photo, reducedMotion, ...props }) {
   const spread = useStore((s) => s.spread)
   const entered = useStore((s) => s.entered)
   const coverRef = useRef()
@@ -129,7 +130,7 @@ export default function Book({ pages, reducedMotion, ...props }) {
     const plainPaper = new THREE.MeshStandardMaterial({ color: '#efe5cf', roughness: 0.9 })
     const leather = new THREE.MeshStandardMaterial({ map: leatherTexture(), roughness: 0.62, metalness: 0.05 })
     const coverFront = new THREE.MeshStandardMaterial({
-      map: coverTexture(profile.name, profile.tagline),
+      map: coverTexture(profile.name, profile.tagline, photo),
       roughness: 0.55,
       metalness: 0.15,
     })
@@ -161,7 +162,7 @@ export default function Book({ pages, reducedMotion, ...props }) {
       m.receiveShadow = true
     }
     return { leaves, coverBlock, coverBoard, backBoard, rightBlock, leather }
-  }, [pages])
+  }, [pages, photo])
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 1 / 20)

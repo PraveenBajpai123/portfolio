@@ -168,7 +168,6 @@ function FairyLights() {
         <sphereGeometry args={[0.0085, 10, 10]} />
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
-      <pointLight position={[1.0, 1.75, -0.1]} color="#ff7ad9" intensity={0.35} distance={1.6} decay={2} />
     </group>
   )
 }
@@ -213,9 +212,8 @@ export default function Decor() {
       <FairyLights />
 
       {/* light the neon casts into the room */}
-      <pointLight position={[-1.05, 2.0, -0.42]} color="#ff3df0" intensity={1.4} distance={2.2} decay={2} />
+      <pointLight position={[-0.9, 1.95, -0.3]} color="#ff3df0" intensity={1.7} distance={2.6} decay={2} />
       <pointLight position={[-0.5, 1.0, -0.48]} color="#38e8ff" intensity={0.8} distance={1.3} decay={2} />
-      <pointLight position={[0.0, 1.7, -0.15]} color="#8a5cff" intensity={0.7} distance={1.8} decay={2} />
     </group>
   )
 }
